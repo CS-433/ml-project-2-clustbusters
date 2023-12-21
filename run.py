@@ -13,26 +13,13 @@ def main():
 
     root_dir = "training/"
     n = 100
-    imgs, gt_imgs = load_dataset(root_dir, load_images_from_directory, max_images=100)
+    imgs, gt_imgs = load_dataset(root_dir, load_images_from_directory, max_images=n)
 
     # Constant parameters
     original_height, original_width = 400, 400      # Image sizes
-    validation_size = 0                             # Validation set for patch threshold test
     test_size = 0.05                                # Test set for CNN fitting
     random_state = 42                               # Random seed for train/test/validation split
-    threshold = 0.5                                 # Threshold for patch prediction
-
-    # U-net hyperparameters
-    activation='relu'
-    depth = 4
-    dropout_rate = 0.1
-    optimizer = 'adam'
-    loss = 'binary_crossentropy'
-    metrics = ['accuracy']
-    patience = 3
-    batch_size = 10
-    epochs = 25
-
+    threshold = 0.2                                 # Threshold for patch prediction
 
     # Choose augmentation options
     augment_options = {
@@ -60,11 +47,27 @@ def main():
 
     history = model.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=25, epochs=3, callbacks=callbacks)
 
+    # Displaying arbitrary image
+    i = random.randint(0, len(X_test) - 1)
+    sample_image = X_test[i]
+    sample_mask = y_test[i]
+
+    # Predict the mask for the sample image
+    prediction = model.predict(sample_image[tf.newaxis, ...])[0]
+    predicted_mask = (prediction > 0.5).astype(np.uint8)
+
+    # Convert the predicted mask into patches
+    predicted_majority_patches = predictions_to_thresholded_patches(predicted_mask, threshold=0.25)
+
+    # Display the original image, true mask, and predicted mask
+    display([sample_image, sample_mask, predicted_majority_patches])
+
     
     test_root_dir = "test_set_images"
     test_images = load_images_from_subfolders(test_root_dir, n=50)
     predictions = predict_images(model, test_images)
 
-    threshold=0.2
     submission_df = create_submission_entries(predictions, threshold=threshold)
     save_submission_to_csv(submission_df, 'submissions/sample_submission.csv')
+
+main()
